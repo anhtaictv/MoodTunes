@@ -19,7 +19,7 @@ from bandit import ThompsonBandit
 import audio_features
 
 app = Flask(__name__)
-app.secret_key = "moodtune_secret_2024"
+app.secret_key = os.environ.get("MOODTUNE_SECRET_KEY", "moodtune_secret_2024")
 
 # ─── CORS: Cho phép origin của frontend, KHÔNG kèm credentials ────
 # Trước đây code dùng supports_credentials=True + origin "*" → trình duyệt

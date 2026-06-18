@@ -7,6 +7,7 @@ module.exports = {
       cwd: "C:\\moodtune\\backend",
       env: {
         MOODTUNE_FRONTEND: "https://anhtaictv.me",
+        MOODTUNE_SECRET_KEY: process.env.MOODTUNE_SECRET_KEY,
       },
       watch: false,
       autorestart: true,
