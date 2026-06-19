@@ -6,7 +6,9 @@ Kiến trúc 2 tầng:
 1. RULE SCORER:
    - Từ điển cảm xúc với weighted scoring (nhanh, chính xác với từ khoá)
    - Bigram boost ×1.5 (cụm 2 từ ăn điểm gấp 1.5)
-   - Negation handling: từ phủ định đứng ngay trước → đảo dấu điểm (×-0.6)
+   - Negation handling: từ/cụm phủ định 1-3 từ ("không", "không hề",
+     "chẳng bao giờ"...) đứng ngay trước unigram HOẶC bigram → đảo dấu
+     điểm (×-0.6)
 
 2. ATTENTION MLP LEARNER (numpy thuần, không dùng framework):
    - Embedding(VOCAB_SIZE, d=32) -> Self-Attention(Q,K,V) -> mean-pool
@@ -19,7 +21,9 @@ Kiến trúc 2 tầng:
    - Online learning từ feedback + experience replay (≤500 mẫu)
      để tránh catastrophic forgetting
    - Dynamic Weight Expansion: từ mới hoàn toàn -> mở rộng Embedding Matrix E
-     bằng np.vstack() (He init x 0.01) ngay tại runtime, không cần restart
+     bằng np.vstack() (He init x 0.01) ngay tại runtime, không cần restart.
+     Cụm cảm xúc mới (bigram chứa từ đó) cũng được thêm vào LEXICON
+     (dynamic_lexicon.json) để rule scorer học được, không chỉ MLP embedding
 
 3. HYBRID BLEND:
    - final = alpha * rule + (1-alpha) * mlp
@@ -33,6 +37,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
 # Ép stdout/stderr dùng UTF-8 để print tiếng Việt không crash trên Windows (cp1252)
 try:
@@ -58,6 +63,7 @@ for emo, words in LEXICON.items():
             VOCAB.append(w)
 
 DYNAMIC_VOCAB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dynamic_vocab.json")
+DYNAMIC_LEXICON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dynamic_lexicon.json")
 
 
 def _load_dynamic_vocab():
@@ -70,41 +76,88 @@ def _load_dynamic_vocab():
     return []
 
 
+def _load_dynamic_lexicon():
+    if os.path.exists(DYNAMIC_LEXICON_PATH):
+        try:
+            with open(DYNAMIC_LEXICON_PATH, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
 DYNAMIC_VOCAB = _load_dynamic_vocab()
 for _w in DYNAMIC_VOCAB:
     if _w not in VOCAB_IDX:
         VOCAB_IDX[_w] = len(VOCAB)
         VOCAB.append(_w)
 
+# Cụm cảm xúc (bigram) học được từ feedback — xem add_lexicon_phrases().
+# Merge thẳng vào LEXICON để rule_score() nhận diện được ngay khi khởi
+# động, không chỉ riêng MLP embedding mới "biết" cụm từ này.
+DYNAMIC_LEXICON = _load_dynamic_lexicon()
+for _emo, _phrases in DYNAMIC_LEXICON.items():
+    for _phrase, _weight in _phrases.items():
+        LEXICON.setdefault(_emo, {})[_phrase] = _weight
+        if _phrase not in VOCAB_IDX:
+            VOCAB_IDX[_phrase] = len(VOCAB)
+            VOCAB.append(_phrase)
+
 VOCAB_SIZE = len(VOCAB)
-print(f"[Init] Vocab={VOCAB_SIZE} (+{len(DYNAMIC_VOCAB)} dynamic) | Classes={N}")
+_n_dynamic_phrases = sum(len(p) for p in DYNAMIC_LEXICON.values())
+print(f"[Init] Vocab={VOCAB_SIZE} (+{len(DYNAMIC_VOCAB)} dynamic word, "
+      f"+{_n_dynamic_phrases} dynamic phrase) | Classes={N}")
 
 
 # ─── TIỀN XỬ LÝ ─────────────────────────────────────────────────
 def preprocess(text):
-    t = text.lower().strip()
+    # Chuẩn hoá NFC: nếu input dùng Unicode tổ hợp dấu rời (NFD — hay gặp khi
+    # copy từ một số nguồn/app khác nhau), dấu câu sẽ là ký tự combining mark
+    # riêng (Mn) và bị regex dưới đây xoá mất vì whitelist chỉ liệt kê ký tự
+    # có dấu dạng dựng sẵn (NFC) -> không chuẩn hoá sẽ làm vỡ từ ("việt" -> "vi").
+    t = unicodedata.normalize("NFC", text).lower().strip()
     # Giữ dấu tiếng Việt
     t = re.sub(r'[^\w\sàáâãèéêìíòóôõùúýăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỷỹ]', ' ', t)
     return t
 
 
 # ─── RULE SCORER ────────────────────────────────────────────────
+# NEGATIONS (lexicon.py) giờ chứa cả cụm phủ định nhiều từ ("không hề",
+# "chẳng bao giờ"). NEGATION_MAX_LEN = số từ dài nhất trong các cụm đó,
+# dùng để giới hạn cửa sổ quét lùi trong _is_negated().
+NEGATION_MAX_LEN = max(len(p.split()) for p in NEGATIONS)
+
+
+def _is_negated(words, idx):
+    """True nếu từ/cụm bắt đầu ở vị trí idx bị phủ định bởi 1..N từ đứng
+    ngay liền trước (N = NEGATION_MAX_LEN). Quét các cụm con ngay trước
+    idx từ ngắn (1 từ) đến dài để bắt được cả phủ định 1 từ ("không vui")
+    và phủ định nhiều từ ("không hề vui", "chẳng bao giờ vui")."""
+    for length in range(1, min(NEGATION_MAX_LEN, idx) + 1):
+        if " ".join(words[idx-length:idx]) in NEGATIONS:
+            return True
+    return False
+
+
 def rule_score(text):
     t = preprocess(text)
     scores = np.zeros(N)
     words = t.split()
 
-    # Bigram matching (cụm 2 từ)
+    # Bigram matching (cụm 2 từ) — cũng bị phủ định nếu có từ/cụm phủ định
+    # đứng ngay trước cụm (trước đây chỉ unigram mới được xét phủ định,
+    # nên "không tập trung" vẫn cộng điểm dương cho "focused")
     for i in range(len(words)-1):
         phrase = words[i]+" "+words[i+1]
+        negated = _is_negated(words, i)
         for ei, emo in enumerate(EMOTIONS):
             if phrase in LEXICON[emo]:
-                scores[ei] += LEXICON[emo][phrase] * 1.5  # bigram boost
+                val = LEXICON[emo][phrase] * 1.5  # bigram boost
+                scores[ei] += (-0.6 * val) if negated else val
 
     # Unigram + xử lý phủ định
     for i, w in enumerate(words):
-        # có từ phủ định ngay trước? ("không vui", "chẳng buồn")
-        negated = i > 0 and words[i-1] in NEGATIONS
+        negated = _is_negated(words, i)
         for ei, emo in enumerate(EMOTIONS):
             if w in LEXICON[emo]:
                 val = LEXICON[emo][w]
@@ -175,6 +228,53 @@ def add_vocab_words(words):
         VOCAB_SIZE = len(VOCAB)
         with open(DYNAMIC_VOCAB_PATH, "w", encoding="utf-8") as f:
             json.dump(DYNAMIC_VOCAB, f, ensure_ascii=False)
+    return added
+
+
+# Mức "liên quan rõ" theo thang weight mô tả trong lexicon.py (1.0-1.5 yếu,
+# 2.0-2.5 rõ, 3.0 mạnh nhất) — dùng làm weight mặc định cho cụm mới học.
+PHRASE_DEFAULT_WEIGHT = 2.0
+
+
+def find_new_phrases(text, oov_words):
+    """Tìm cụm 2 từ (bigram) trong câu có chứa ít nhất 1 từ thuộc oov_words
+    (từ hoàn toàn mới, do find_oov_words() phát hiện). Đây chính là cụm
+    cảm xúc mới mà rule scorer cần học cùng lúc với add_vocab_words(): nếu
+    chỉ thêm từ đơn vào VOCAB thì rule_score() (chỉ so khớp theo LEXICON)
+    vẫn không biết gì về từ đó, chỉ MLP embedding học được."""
+    if not oov_words:
+        return []
+    t = preprocess(text)
+    words = t.split()
+    oov_set = set(oov_words)
+    phrases = []
+    for i in range(len(words) - 1):
+        if words[i] in oov_set or words[i+1] in oov_set:
+            phrase = words[i] + " " + words[i+1]
+            if phrase not in phrases:
+                phrases.append(phrase)
+    return phrases
+
+
+def add_lexicon_phrases(phrases, emotion, weight=PHRASE_DEFAULT_WEIGHT):
+    """Thêm cụm từ mới vào LEXICON[emotion] (rule scorer học được ngay) và
+    vào VOCAB (MLP embedding học được), lưu lại dynamic_lexicon.json.
+    Trả về số ô embedding mới cần thêm (để cộng vào k của expand_vocab)."""
+    global VOCAB_SIZE
+    added = 0
+    for phrase in phrases:
+        if phrase not in LEXICON[emotion]:
+            LEXICON[emotion][phrase] = weight
+            DYNAMIC_LEXICON.setdefault(emotion, {})[phrase] = weight
+        if phrase not in VOCAB_IDX:
+            VOCAB_IDX[phrase] = len(VOCAB)
+            VOCAB.append(phrase)
+            added += 1
+    if added:
+        VOCAB_SIZE = len(VOCAB)
+    if phrases:
+        with open(DYNAMIC_LEXICON_PATH, "w", encoding="utf-8") as f:
+            json.dump(DYNAMIC_LEXICON, f, ensure_ascii=False)
     return added
 
 
@@ -455,12 +555,18 @@ class EmotionEngine:
         (OOV), tự động mở rộng VOCAB + Embedding Matrix (Ý tưởng 1)."""
         label = EMOTIONS.index(correct_emotion)
 
-        # Dynamic Weight Expansion: phát hiện + thêm từ mới vào vocab
+        # Dynamic Weight Expansion: phát hiện + thêm từ mới vào vocab, đồng
+        # thời thêm cụm cảm xúc mới (bigram chứa từ mới) vào LEXICON để rule
+        # scorer cũng học được — trước đây chỉ add_vocab_words (từ đơn) nên
+        # chỉ MLP embedding học, rule scorer không biết gì về cụm từ mới.
         oov = find_oov_words(text)
-        added = add_vocab_words(oov)
+        added_words = add_vocab_words(oov)
+        new_phrases = find_new_phrases(text, oov)
+        added_phrases = add_lexicon_phrases(new_phrases, correct_emotion)
+        added = added_words + added_phrases
         if added:
             self.mlp.expand_vocab(added)
-            print(f"[Vocab] +{added} từ mới -> vocab_size={self.vocab_size}")
+            print(f"[Vocab] +{added_words} từ mới, +{added_phrases} cụm mới -> vocab_size={self.vocab_size}")
 
         ids = to_token_ids(text)
         y = np.zeros(N); y[label] = 1.0

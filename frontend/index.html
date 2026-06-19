@@ -202,7 +202,7 @@ audio{width:100%;height:40px}
 
 <header>
   <div>
-    <div class="logo">Mood<em>Tune</em> <span class="version-tag" onclick="showVersions()" title="Xem lịch sử phiên bản">v3.5</span></div>
+    <div class="logo">Mood<em>Tune</em> <span class="version-tag" onclick="showVersions()" title="Xem lịch sử phiên bản">v3.6</span></div>
     <div class="sub">// AI CẢM XÚC TỰ XÂY · SELF-ATTENTION · JAMENDO</div>
   </div>
   <div class="header-actions">
@@ -214,7 +214,7 @@ audio{width:100%;height:40px}
 <div class="modal-overlay" id="about-overlay" onclick="if(event.target===this) hideAbout()">
   <div class="modal-box">
     <h2>Mood<em>Tune</em></h2>
-    <div class="modal-version">Phiên bản v3.5 — 10 cảm xúc · RLUF Bandit · Knowledge Graph · Self-Attention · Jamendo</div>
+    <div class="modal-version">Phiên bản v3.6 — 10 cảm xúc · RLUF Bandit · Knowledge Graph · Self-Attention · Jamendo</div>
     <p>Nội dung giới thiệu chi tiết sẽ được cập nhật sau.</p>
     <div class="team-list">
       <div class="team-member"><span>Tạ Anh Tài</span><span class="team-role">Nhóm trưởng</span></div>
@@ -232,7 +232,11 @@ audio{width:100%;height:40px}
     <div class="modal-version">MoodTune — Changelog</div>
     <div class="version-list">
       <div class="version-item current">
-        <div class="version-item-head"><span class="version-name">v3.5 — Chuẩn hoá cảm xúc theo Valence-Arousal</span><span class="version-tag-sm">hiện tại</span></div>
+        <div class="version-item-head"><span class="version-name">v3.6 — Chuẩn hoá nhận diện phủ định & cụm từ cảm xúc</span><span class="version-tag-sm">hiện tại</span></div>
+        <div class="version-desc">Sửa rule scorer nhận diện phủ định tiếng Việt sai/thiếu: hỗ trợ phủ định <b>nhiều từ</b> ("không hề", "chẳng bao giờ"...), và áp dụng phủ định cho cả <b>cụm 2 từ (bigram)</b> — trước đây chỉ từ đơn mới được xét, nên "không tập trung" vẫn bị tính điểm dương cho "Tập trung". Mở rộng vocab động: cụm từ cảm xúc mới học được từ feedback giờ tự thêm vào từ điển (<code>dynamic_lexicon.json</code>) để rule scorer học được ngay, không chỉ riêng phần MLP embedding như trước.</div>
+      </div>
+      <div class="version-item">
+        <div class="version-item-head"><span class="version-name">v3.5 — Chuẩn hoá cảm xúc theo Valence-Arousal</span></div>
         <div class="version-desc">Rút gọn từ <b>15 → 10 "cảm xúc đơn giản"</b>, loại bỏ các class trùng lặp/không phải cảm xúc thuần (Vui nhộn, Phiêu lưu, Bí ẩn, Tự tin, Biết ơn). Đổi tên class nội bộ sang tiếng Anh (happy, sad, romantic...), nhãn hiển thị vẫn giữ tiếng Việt. Áp dụng mô hình khoa học <b>Valence-Arousal (GEMS/Circumplex)</b>: thêm toạ độ Sắc thái/Năng lượng cho từng cảm xúc và cập nhật bộ tag Jamendo theo mô hình này. Cập nhật lại từ điển/vocab, dọn các nút cảm xúc trùng/dư ở khung "Nhập cảm xúc", model Self-Attention được train lại với kiến trúc đầu ra mới.</div>
       </div>
       <div class="version-item">

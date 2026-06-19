@@ -10,7 +10,11 @@
 #                    weight 1.0–1.5 : liên quan yếu
 #                    weight 2.0–2.5 : liên quan rõ
 #                    weight 3.0     : từ đặc trưng mạnh nhất
-#    NEGATIONS     — từ phủ định đứng ngay trước từ cảm xúc → nhân ×-0.6
+#    NEGATIONS     — từ/cụm phủ định (1-3 từ) đứng ngay trước từ/cụm cảm
+#                    xúc (unigram lẫn bigram) → nhân ×-0.6. Hỗ trợ cả phủ
+#                    định nhiều từ ("không hề", "chẳng bao giờ") nhờ
+#                    rule_score() quét các cụm con 1..N từ ngay trước vị
+#                    trí đang xét (xem _is_negated() trong emotion_mlp.py)
 #
 #  Ghi chú bigram:
 #    Cụm 2 từ ("ngày xưa", "tập trung") tự động được boost ×1.5 trong
@@ -52,9 +56,20 @@ EMOTION_META = {
 }
 
 # ── TỪ PHỦ ĐỊNH ──────────────────────────────────────────────────
-# Nếu một từ trong tập này đứng ngay trước từ cảm xúc → điểm ×-0.6
+# Nếu một từ/cụm trong tập này đứng ngay trước từ/cụm cảm xúc → điểm ×-0.6
 # Ví dụ: "không vui" → happy bị trừ thay vì cộng
-NEGATIONS = {"không", "chẳng", "chả", "đâu", "chưa", "khỏi", "ko", "k"}
+# Cụm 2-3 từ ("không hề", "chẳng bao giờ") cũng được nhận diện — không cần
+# sửa code, cứ thêm cụm phủ định mới vào đây là rule_score() tự bắt được.
+NEGATIONS = {
+    # 1 từ
+    "không", "chẳng", "chả", "đâu", "chưa", "khỏi", "ko", "k",
+    # 2 từ
+    "không hề", "chẳng hề", "chả hề", "chưa hề",
+    "không phải", "chẳng phải", "chả phải",
+    "không có", "đâu có", "có đâu", "đâu phải",
+    # 3 từ
+    "không bao giờ", "chẳng bao giờ", "chả bao giờ", "chưa bao giờ",
+}
 
 # ── TỪ ĐIỂN CHÍNH ────────────────────────────────────────────────
 LEXICON = {
