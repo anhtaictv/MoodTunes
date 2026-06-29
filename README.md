@@ -1,67 +1,77 @@
 <div align="center">
-  <img src="MoodTune.png" alt="MoodTune" width="120" />
+  <img src="frontend/logo.png" alt="MoodTune" width="110" />
 
-  # MoodTune
+  <h1>MoodTune</h1>
 
-  **AI-powered music recommendation based on emotion detected from Vietnamese text**
+  <p><strong>Gõ cảm xúc — nhận ngay nhạc phù hợp</strong><br/>
+  AI nhận diện cảm xúc từ văn bản tiếng Việt, gợi ý nhạc miễn phí, không cần đăng nhập.</p>
 
-  [![Version](https://img.shields.io/badge/version-v4.0-blue?style=flat-square)](https://github.com/anhtaictv/MoodTunes/releases)
+  [![Version](https://img.shields.io/badge/version-v4.0-brightgreen?style=flat-square)](https://github.com/anhtaictv/MoodTunes/releases)
   [![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
   [![Flask](https://img.shields.io/badge/Flask-2.x-000000?style=flat-square&logo=flask)](https://flask.palletsprojects.com)
-  [![NumPy](https://img.shields.io/badge/NumPy-only-013243?style=flat-square&logo=numpy)](https://numpy.org)
+  [![NumPy](https://img.shields.io/badge/NumPy_only-no_framework-013243?style=flat-square&logo=numpy)](https://numpy.org)
+  [![Live](https://img.shields.io/badge/live-anhtaictv.me-1db954?style=flat-square&logo=googlechrome&logoColor=white)](https://anhtaictv.me)
 
-  [🌐 Live Demo](https://anhtaictv.me) · [🇻🇳 Bản tiếng Việt](README.vi.md)
+  [🌐 Live Demo](https://anhtaictv.me) · [🇬🇧 English](README.en.md) · [🇻🇳 Tiếng Việt](README.vi.md)
 </div>
 
 ---
 
-## Overview
+## Giới thiệu
 
-MoodTune analyzes a piece of Vietnamese text, infers the user's emotion using a custom AI engine, and returns matching music tracks from the Jamendo API — free, no login required.
+MoodTune là ứng dụng gợi ý nhạc theo cảm xúc: bạn gõ một câu mô tả tâm trạng (hoặc chọn emoji), AI tự phân tích cảm xúc và trả về danh sách nhạc phù hợp từ Jamendo — miễn phí, full track, không cần tài khoản.
 
-The AI engine is built **from scratch in pure NumPy** (no PyTorch, no TensorFlow): a hybrid of a hand-crafted rule scorer over a Vietnamese emotion lexicon and a self-attention MLP that learns online from user feedback.
+**Điểm đặc biệt:** toàn bộ AI engine được viết từ đầu bằng **NumPy thuần** — không PyTorch, không TensorFlow. Kiến trúc gồm rule scorer trên lexicon tiếng Việt kết hợp với Self-Attention MLP học online từ phản hồi người dùng.
 
-## Features
+```
+"hôm nay mệt mỏi muốn thư giãn" → 😌 Thư giãn → lofi + ambient
+"năng lượng tràn trề muốn workout" → ⚡ Năng động → electronic + dance
+"nhớ về kỷ niệm ngày xưa"        → 🍂 Hoài niệm → retro + acoustic
+```
 
-- **Emotion detection** — 10-class Valence-Arousal model aligned with the GEMS/Circumplex framework
-- **Self-attention MLP** — Embedding + Q/K/V attention written in NumPy; understands word order and negation
-- **Online learning** — model updates in real time from every feedback signal (like / dislike / skip)
-- **Thompson Sampling bandit** — learns individual music taste across sessions
-- **Audio feature re-ranking** — BPM, spectral centroid, MFCC via librosa to refine track selection
-- **Multi-theme UI** — Dark (Midnight), Light (Aurora), Vivid (Sunset); remembered via localStorage
-- **PWA** — installable, works offline for cached content
-- **Zero ML framework dependency** — entire AI stack runs on NumPy + Python stdlib
+## Tính năng
 
-## Tech Stack
+| Tính năng | Mô tả |
+|---|---|
+| 🧠 **Nhận diện cảm xúc** | 10 class theo mô hình Valence-Arousal (GEMS/Circumplex) |
+| 🔤 **Word Segmentation** | Tokenizer longest-match N-gram (v4.0), nhận diện cụm tới 5 từ |
+| 📚 **Online learning** | Model cập nhật ngay từ mỗi feedback like / dislike / skip |
+| 🎰 **Thompson Sampling** | Bandit học gu nhạc cá nhân qua từng phiên sử dụng |
+| 🎵 **Audio re-ranking** | BPM, spectral centroid, MFCC để tinh chỉnh danh sách nhạc |
+| 🌓 **Đa theme** | Midnight · Aurora · Sunset — nhớ qua localStorage |
+| 📱 **PWA** | Cài như app, hỗ trợ offline với nội dung đã cache |
+| ⚡ **Zero dependency** | Toàn bộ AI chỉ cần NumPy + Python stdlib |
 
-| Layer | Technology |
+## Công nghệ
+
+| Tầng | Công nghệ |
 |---|---|
 | Backend | Python 3, Flask, Waitress |
-| AI Engine | NumPy (custom MLP, attention, bandit) |
-| Music API | Jamendo |
-| Frontend | Vanilla HTML / CSS / JS (no build step) |
+| AI Engine | NumPy — MLP, Self-Attention, Thompson Bandit tự viết |
+| Music API | Jamendo (free, full tracks) |
+| Frontend | HTML / CSS / JS thuần (không build step) |
 | Process manager | PM2 |
 | Reverse proxy | IIS / Nginx |
 
-## Project Structure
+## Cấu trúc dự án
 
 ```
-moodtune/
+MoodTunes/
 ├── backend/
-│   ├── app.py                  # Flask entrypoint
-│   ├── emotion_mlp.py          # Self-attention MLP + online learning
-│   ├── lexicon.py              # Vietnamese emotion lexicon & rule scorer
+│   ├── app.py                  # Flask entrypoint + REST API
+│   ├── emotion_mlp.py          # Self-Attention MLP + online learning
+│   ├── lexicon.py              # Lexicon cảm xúc tiếng Việt & rule scorer
 │   ├── bandit.py               # Thompson Sampling bandit
-│   ├── audio_features.py       # BPM / spectral / MFCC re-ranking
-│   ├── weights.npz             # Trained model weights
-│   ├── dynamic_vocab.json      # Runtime vocabulary
+│   ├── audio_features.py       # Re-ranking BPM / spectral / MFCC
+│   ├── weights.npz             # Trọng số model đã huấn luyện
+│   ├── dynamic_vocab.json      # Vocab mở rộng runtime
 │   ├── requirements.txt
 │   └── ecosystem.config.js     # PM2 config
 └── frontend/
-    └── index.html              # Single-page app
+    └── index.html              # Single-page app (vanilla JS)
 ```
 
-## Quick Start
+## Chạy nhanh
 
 **Backend**
 
@@ -69,13 +79,12 @@ moodtune/
 cd backend
 pip install -r requirements.txt
 python app.py
+# → http://localhost:5005  |  kiểm tra: /api/health
 ```
-
-Runs at `http://localhost:5005`. Check `/api/health` to verify.
 
 **Frontend**
 
-Open `frontend/index.html` in a browser (or serve via any static server on port 5500). When running on `localhost` / `file://`, the frontend automatically targets `http://localhost:5005/api`.
+Mở `frontend/index.html` trong trình duyệt (hoặc static server port 5500). Khi chạy ở `localhost` / `file://`, frontend tự gọi `http://localhost:5005/api`.
 
 **Production (PM2)**
 
@@ -83,45 +92,28 @@ Open `frontend/index.html` in a browser (or serve via any static server on port 
 pm2 start backend/ecosystem.config.js
 ```
 
-## Environment Variables
+## Biến môi trường
 
-All variables have defaults — none are required for local development.
+Tất cả đều có giá trị mặc định — không bắt buộc khi chạy local.
 
-| Variable | Default | Description |
+| Biến | Mặc định | Ý nghĩa |
 |---|---|---|
-| `MOODTUNE_SECRET_KEY` | `moodtune_secret_2024` | Flask secret key. Override in production. |
-| `MOODTUNE_FRONTEND` | `https://anhtaictv.me` | Frontend origin for CORS. |
-| `JAMENDO_CLIENT_ID` | `cf31dbfd` | Jamendo API client ID. |
+| `MOODTUNE_SECRET_KEY` | *(insecure default)* | Flask secret key — **bắt buộc đổi khi deploy thật** |
+| `MOODTUNE_FRONTEND` | `https://anhtaictv.me` | Origin frontend cho CORS |
+| `JAMENDO_CLIENT_ID` | `cf31dbfd` | Client ID Jamendo API |
+| `MOODTUNE_PYTHON` | *(path Python có waitress)* | Override interpreter cho PM2 |
 
-## Production Deployment
+## Lịch sử phiên bản
 
-The frontend calls `/api` (relative path). Set up a reverse proxy (IIS or Nginx) to route `/api` → Flask backend on port 5005. See `frontend/web.config` for a sample IIS configuration.
-
-## Model Data
-
-| File | Contents |
+| Phiên bản | Nội dung |
 |---|---|
-| `weights.npz` | MLP weights + embedding matrix |
-| `weights_meta.json` | Vocabulary metadata |
-| `weights_replay.json` | Replay buffer for online learning |
-| `dynamic_vocab.json` | Runtime-expanded vocabulary |
+| `v4.0` | Word Segmentation — longest-match N-gram tokenizer, sửa "vocab chết" |
+| `v3.8` | Giao diện đa theme: Midnight / Aurora / Sunset |
+| `v3.7` | Production: PWA, presence widget, Waitress, rate limiting |
+| `v3.6` | Sửa rule scorer phủ định nhiều từ (`"không hề"`, `"chẳng bao giờ"`) |
+| `v3.5` | Rút về 10 class Valence-Arousal (GEMS/Circumplex) |
+| `v3.0` | Thompson Sampling bandit + sơ đồ tri thức Canvas 2D |
+| `v2.0` | Self-Attention (Q/K/V NumPy), audio features, dynamic vocab |
+| `v1.0` | Rule scorer + MLP hybrid, Jamendo API, online learning |
 
-## Version History
-
-Click the version tag in the app UI to view the changelog. Full writeups (architecture diagrams, before/after comparisons, test results) are linked below.
-
-| Version | Name | Highlights |
-|---|---|---|
-| `v4.0` | Word Segmentation | Generalized tokenizer to **longest-match N-gram** (up to 5 words); fixed "dead vocab" bug for 54 unreachable multi-word phrases. ([report](BaoCao_MoodTune_v4.0.md)) |
-| `v3.8` | Multi-theme UI | 3 themes: Midnight / Aurora / Sunset; WCAG AA contrast on all themes; theme-aware knowledge graph. ([report](BaoCao_MoodTune_v3.8.md)) |
-| `v3.7` | Production reliability | PWA manifest, presence widget, Waitress server, rate limiting, auto-heal on vocab mismatch. ([report](BaoCao_MoodTune_v3.7.md)) |
-| `v3.6` | Negation fix | Fixed rule scorer to handle multi-word negations (`"không hề"`, `"chẳng bao giờ"`, etc.). ([report](BaoCao_MoodTune_v3.6.md)) |
-| `v3.5` | Valence-Arousal | Reduced to 10 emotion classes aligned with the GEMS/Circumplex model. ([report](BaoCao_MoodTune_v3.5.md)) |
-| `v3.1` | New emotions | Added confident 💪, grateful 🙏, angry 😡 — 12 → 15 classes. ([report](BaoCao_MoodTune_v3.1.md)) |
-| `v3.0` | Bandit + Knowledge Graph | Thompson Sampling bandit for music taste; interactive Canvas 2D emotion knowledge graph. ([report](BaoCao_MoodTune_v3.0.md)) |
-| `v2.5` | Adaptive Learning | ReLU → Leaky ReLU; adaptive L2 regularization; in-app changelog modal. ([report](BaoCao_MoodTune_v2.5.md)) |
-| `v2.0` | Self-Attention | Embedding + self-attention (Q,K,V) in NumPy; audio feature engine; dynamic vocab expansion. ([report](BaoCao_MoodTune_v2.0.md)) |
-| `v1.1` | UI polish | Version badge; personalized & time-of-day recommendations; analysis history. ([report](BaoCao_MoodTune_v1.1.md)) |
-| `v1.0` | Foundation | Rule scorer + MLP hybrid, Jamendo API, basic online learning. |
-
-Additional documents: [`BaoCao_MoodTune_TongQuan.md`](BaoCao_MoodTune_TongQuan.md) (overall architecture) and [`BaoCao_MoodTune_DacTrung_AIEngine_API.md`](BaoCao_MoodTune_DacTrung_AIEngine_API.md) (AI engine & API deep dive).
+Báo cáo chi tiết từng phiên bản: xem các file `BaoCao_MoodTune_v*.md` trong repo.
