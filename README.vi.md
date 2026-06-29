@@ -10,7 +10,7 @@
   [![Flask](https://img.shields.io/badge/Flask-2.x-000000?style=flat-square&logo=flask)](https://flask.palletsprojects.com)
   [![NumPy](https://img.shields.io/badge/NumPy-only-013243?style=flat-square&logo=numpy)](https://numpy.org)
 
-  [🌐 Xem Demo](https://anhtaictv.me) · [🇬🇧 English version](README.md)
+  [🌐 Xem Demo](https://anhtaictv.me) · [🇬🇧 English version](README.en.md)
 </div>
 
 ---
